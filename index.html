@@ -291,10 +291,13 @@ function toDirectVideoUrl(url){
   if(!url) return null;
   // O Apps Script agora devolve file.getDownloadUrl() para vídeos do Drive.
   // Nesse caso usamos exatamente essa URL no player HTML5.
-  if(url.includes('drive.usercontent.google.com/download')) return url;
+  if(url.includes('drive.usercontent.google.com/download')) {
+    const id = getDriveId(url);
+    return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
+  }
   if(url.match(/\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i)) return url;
   const id = getDriveId(url);
-  if(id) return `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`;
+  if(id) return `https://drive.google.com/uc?export=download&id=${id}`;
   return null;
 }
 
@@ -497,22 +500,25 @@ function openModal(p){
         node.play().catch(() => {});
       }, {once:true});
       node.addEventListener('error', () => {
-        // Segunda tentativa: URL pública direta do Drive. Não voltamos para
-        // o iframe /preview, que é justamente o player que apresentou
-        // comportamento instável no Safari/iPhone.
         const id = getDriveId(p.video);
         if(id && !node.dataset.fallback){
           node.dataset.fallback = '1';
           const retry = document.createElement('video');
           retry.className = 'gallery-main-media';
-          retry.src = `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`;
+          retry.src = `https://drive.google.com/uc?export=download&id=${id}`;
           retry.controls = true;
-          retry.autoplay = true;
           retry.playsInline = true;
           retry.setAttribute('webkit-playsinline', 'true');
-          retry.preload = 'metadata';
+          retry.preload = 'auto';
           retry.setAttribute('controlsList', 'nodownload');
           retry.addEventListener('loadedmetadata', () => retry.play().catch(() => {}), {once:true});
+          retry.addEventListener('error', () => {
+            const msg = document.createElement('div');
+            msg.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:#fff;background:#050505;font-size:15px;';
+            msg.textContent='Não foi possível reproduzir este vídeo diretamente. Tente tocar novamente.';
+            media.insertBefore(msg, media.querySelector('.modal-prev'));
+            retry.remove();
+          }, {once:true});
           node.replaceWith(retry);
         }
       }, {once:true});
