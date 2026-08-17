@@ -60,13 +60,17 @@
   .product-card:hover{border-color:rgba(201,162,39,0.45); transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,0.45);}
   .product-card.selected{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
 
-  .photo-strip{position:relative; height:190px; overflow:hidden; background:#000;}
-  .photo-strip img{width:100%; height:100%; object-fit:cover; transition:transform .4s ease;}
-  .product-card:hover .photo-strip img{transform:scale(1.04);}
+  .photo-strip{position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center;}
+  .photo-strip img{display:block; width:100%; height:100%; object-fit:contain; transition:transform .4s ease;}
+  .product-card:hover .photo-strip img{transform:scale(1.01);}
   .photo-strip::after{content:"Ver detalhes"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink);
     background:rgba(10,10,11,0.55); opacity:0; transition:opacity .25s ease;}
   .product-card:hover .photo-strip::after{opacity:1;}
+  @media (max-width:720px){
+    .photo-strip{aspect-ratio:4/3; min-height:260px;}
+  }
+
   .video-badge{position:absolute; bottom:10px; right:10px; background:rgba(10,10,11,0.75); color:var(--ink);
     font-family:'IBM Plex Mono',monospace; font-size:10px; padding:4px 9px; border-radius:20px; z-index:2;}
 
@@ -122,16 +126,23 @@
   .modal-close{position:absolute; top:16px; right:16px; z-index:2; width:36px; height:36px; border-radius:50%;
     background:rgba(10,10,11,0.6); border:1px solid var(--line-strong); color:var(--ink); font-size:20px;
     display:flex; align-items:center; justify-content:center; line-height:1;}
-  .modal-grid{display:grid; grid-template-columns:1.15fr 1fr;}
+  .modal-grid{display:grid; grid-template-columns:1.35fr .9fr; min-height:0;}
   @media (max-width:720px){ .modal-grid{grid-template-columns:1fr;} }
-  .modal-media{aspect-ratio:1/1; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;}
-  .modal-media img, .modal-media video{width:100%; height:100%; object-fit:cover;}
-  .modal-media iframe{width:100%; height:100%; border:0;}
-  .modal-thumbs{display:flex; gap:8px; padding:12px; overflow-x:auto; background:var(--bg-panel);}
-  .modal-thumb{width:56px; height:56px; flex-shrink:0; border-radius:4px; overflow:hidden; border:2px solid transparent; cursor:pointer;}
-  .modal-thumb.active{border-color:var(--gold);}
-  .modal-thumb img{width:100%; height:100%; object-fit:cover;}
-  .video-thumb{background:var(--bg-panel-2); display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:18px;}
+  .modal-gallery{background:#050505; min-width:0;}
+  .modal-media{position:relative; aspect-ratio:1/1; min-height:420px; background:#050505; display:flex; align-items:center; justify-content:center; overflow:hidden; touch-action:pan-y;}
+  .modal-media img, .modal-media video{width:100%; height:100%; object-fit:contain; display:block; background:#050505;}
+  .modal-media iframe{width:100%; height:100%; border:0; background:#000;}
+  .modal-nav{position:absolute; top:50%; transform:translateY(-50%); z-index:4; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.62); color:#fff; display:flex; align-items:center; justify-content:center; font-size:28px; line-height:1; cursor:pointer; backdrop-filter:blur(5px); transition:transform .2s, background .2s;}
+  .modal-nav:hover{background:rgba(0,0,0,.82); transform:translateY(-50%) scale(1.05);}
+  .modal-prev{left:14px;}
+  .modal-next{right:14px;}
+  .modal-counter{position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:4; padding:6px 11px; border-radius:20px; background:rgba(0,0,0,.62); color:#fff; font:11px 'IBM Plex Mono',monospace; letter-spacing:.04em; border:1px solid rgba(255,255,255,.16); pointer-events:none;}
+  .modal-thumbs{display:flex; gap:10px; padding:12px; overflow-x:auto; background:#0b0b0c; scrollbar-width:thin;}
+  .modal-thumb{position:relative; width:72px; height:72px; flex-shrink:0; border-radius:8px; overflow:hidden; border:2px solid transparent; cursor:pointer; background:#171719;}
+  .modal-thumb.active{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
+  .modal-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .video-thumb{background:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),var(--bg-panel-2); display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px;}
+  .video-thumb::after{content:'VÍDEO'; position:absolute; bottom:5px; left:0; right:0; text-align:center; font:9px 'IBM Plex Mono',monospace; letter-spacing:.08em; color:#fff;}
   .modal-info{padding:32px 28px; display:flex; flex-direction:column; gap:14px;}
   .modal-info h2{font-size:24px; font-weight:700;}
   .modal-info .spec{color:var(--ink-dim); font-size:14px;}
@@ -141,7 +152,12 @@
   @media (max-width:720px){
     .modal-overlay{padding:0; align-items:flex-end;}
     .modal-box{max-width:100%; width:100%; max-height:92vh; border-radius:16px 16px 0 0;}
-    .modal-media{aspect-ratio:4/3;}
+    .modal-media{aspect-ratio:4/3; min-height:0; max-height:58vh;}
+    .modal-nav{width:40px; height:40px; font-size:24px;}
+    .modal-prev{left:8px;}
+    .modal-next{right:8px;}
+    .modal-thumbs{padding:10px; gap:8px;}
+    .modal-thumb{width:64px; height:64px;}
     .modal-info{padding:20px;}
     .modal-info h2{font-size:20px;}
   }
@@ -368,7 +384,8 @@ document.getElementById('whats-btn').addEventListener('click', async (ev) => {
     });
   }catch(err){ /* mesmo se falhar o registro, deixa o cliente seguir pro WhatsApp */ }
 
-  const msg = `Olá! Quero pedir o ${state.product.modelo} (${state.product.condicao})${state.capinha ? ' com capinha ' + state.capinha.nome : ''}.`;
+  const productUrl = `${location.origin}${location.pathname}?produto=${encodeURIComponent(state.product.id)}`;
+  const msg = `Olá! Quero pedir o ${state.product.modelo} (${state.product.condicao}).\nCor: ${state.product.cor || 'Não informada'}\nBateria: ${state.product.saudeBateria ? state.product.saudeBateria + '%' : 'Não informada'}${state.capinha ? '\nCapinha: ' + state.capinha.nome : ''}\nLink do iPhone: ${productUrl}`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
   btn.disabled = false;
   btn.innerHTML = original;
@@ -386,36 +403,89 @@ function openModal(p){
   const thumbs = document.getElementById('modal-thumbs');
   thumbs.innerHTML = '';
 
-  const photos = p.fotos.length ? p.fotos : ['https://placehold.co/700x700/131316/8b8d93?text=Foto'];
-  function showPhoto(src){ media.innerHTML = `<img src="${src}" alt="${p.modelo}">`; }
-  showPhoto(photos[0]);
+  const photos = p.fotos.length ? p.fotos : ['https://placehold.co/1000x1000/131316/8b8d93?text=Foto'];
+  let current = 0;
+  let showingVideo = false;
+
+  media.innerHTML = `
+    <button class="modal-nav modal-prev" type="button" aria-label="Foto anterior">‹</button>
+    <div class="modal-counter" id="modal-counter">1 / ${photos.length}</div>
+    <button class="modal-nav modal-next" type="button" aria-label="Próxima foto">›</button>
+  `;
+
+  const counter = media.querySelector('#modal-counter');
+
+  function updateGallery(){
+    showingVideo = false;
+    const old = media.querySelector('.gallery-main-media');
+    if(old) old.remove();
+    const img = document.createElement('img');
+    img.className = 'gallery-main-media';
+    img.src = photos[current];
+    img.alt = p.modelo + ' - foto ' + (current + 1);
+    img.loading = 'eager';
+    media.insertBefore(img, media.querySelector('.modal-prev'));
+    counter.textContent = `${current + 1} / ${photos.length}`;
+    thumbs.querySelectorAll('.modal-thumb').forEach((el, i) => el.classList.toggle('active', i === current));
+  }
+
+  function showPhoto(index){
+    current = (index + photos.length) % photos.length;
+    updateGallery();
+  }
+
+  function showVideo(){
+    if(!p.video) return;
+    showingVideo = true;
+    const old = media.querySelector('.gallery-main-media');
+    if(old) old.remove();
+    const embed = toEmbedUrl(p.video);
+    const node = document.createElement(embed ? 'iframe' : 'video');
+    node.className = 'gallery-main-media';
+    if(embed){
+      node.src = embed;
+      node.allowFullscreen = true;
+      node.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    }else{
+      node.src = p.video;
+      node.controls = true;
+      node.autoplay = true;
+      node.playsInline = true;
+    }
+    media.insertBefore(node, media.querySelector('.modal-prev'));
+    counter.textContent = 'VÍDEO';
+    thumbs.querySelectorAll('.modal-thumb').forEach(el => el.classList.remove('active'));
+    const videoThumb = thumbs.querySelector('.video-thumb');
+    if(videoThumb) videoThumb.classList.add('active');
+  }
 
   photos.forEach((src, i) => {
     const t = document.createElement('div');
     t.className = 'modal-thumb' + (i === 0 ? ' active' : '');
-    t.innerHTML = `<img src="${src}">`;
-    t.addEventListener('click', () => {
-      showPhoto(src);
-      thumbs.querySelectorAll('.modal-thumb').forEach(el => el.classList.remove('active'));
-      t.classList.add('active');
-    });
+    t.innerHTML = `<img src="${src}" alt="Miniatura ${i + 1}">`;
+    t.addEventListener('click', () => showPhoto(i));
     thumbs.appendChild(t);
   });
 
   if(p.video){
-    const embed = toEmbedUrl(p.video);
     const t = document.createElement('div');
     t.className = 'modal-thumb video-thumb';
     t.innerHTML = '▶';
-    t.addEventListener('click', () => {
-      media.innerHTML = embed
-        ? `<iframe src="${embed}" allowfullscreen allow="autoplay; encrypted-media"></iframe>`
-        : `<video src="${p.video}" controls autoplay></video>`;
-      thumbs.querySelectorAll('.modal-thumb').forEach(el => el.classList.remove('active'));
-      t.classList.add('active');
-    });
+    t.addEventListener('click', showVideo);
     thumbs.appendChild(t);
   }
+
+  media.querySelector('.modal-prev').addEventListener('click', () => showPhoto(current - 1));
+  media.querySelector('.modal-next').addEventListener('click', () => showPhoto(current + 1));
+
+  let touchStartX = 0;
+  media.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+  media.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if(Math.abs(dx) > 45 && !showingVideo) showPhoto(current + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  updateGallery();
 
   document.getElementById('modal-choose').onclick = () => {
     selectProduct(p.id);
@@ -442,7 +512,13 @@ document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', (e) => {
   if(e.target.id === 'modal-overlay') closeModal();
 });
-document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('modal-overlay');
+  if(!modal.classList.contains('active')) return;
+  if(e.key === 'Escape') closeModal();
+  if(e.key === 'ArrowLeft') document.querySelector('.modal-prev')?.click();
+  if(e.key === 'ArrowRight') document.querySelector('.modal-next')?.click();
+});
 
 function maybeOpenFromUrl(){
   const params = new URLSearchParams(location.search);
