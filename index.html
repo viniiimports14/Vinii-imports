@@ -131,8 +131,7 @@
   .modal-gallery{background:#050505; min-width:0;}
   .modal-media{position:relative; aspect-ratio:1/1; min-height:420px; background:#050505; display:flex; align-items:center; justify-content:center; overflow:hidden; touch-action:pan-y;}
   .modal-media img, .modal-media video{width:100%; height:100%; object-fit:contain; display:block; background:#050505;}
-  .modal-media iframe{width:100%; height:100%; border:0; background:#000; display:block;}
-  .modal-media video{object-fit:contain !important; background:#000;}
+  .modal-media iframe{width:100%; height:100%; border:0; background:#000;}
   .modal-nav{position:absolute; top:50%; transform:translateY(-50%); z-index:4; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.62); color:#fff; display:flex; align-items:center; justify-content:center; font-size:28px; line-height:1; cursor:pointer; backdrop-filter:blur(5px); transition:transform .2s, background .2s;}
   .modal-nav:hover{background:rgba(0,0,0,.82); transform:translateY(-50%) scale(1.05);}
   .modal-prev{left:14px;}
@@ -162,22 +161,6 @@
     .modal-info{padding:20px;}
     .modal-info h2{font-size:20px;}
   }
-
-  /* ---------- CELULAR DEITADO (LANDSCAPE) ---------- */
-  @media (max-width:900px) and (orientation:landscape){
-    .modal-overlay{padding:8px; align-items:center; overflow:hidden;}
-    .modal-box{width:100%; max-width:100%; height:calc(100dvh - 16px); max-height:none; overflow:hidden; border-radius:14px;}
-    .modal-grid{grid-template-columns:minmax(0,1.25fr) minmax(250px,.75fr); height:100%; min-height:0;}
-    .modal-gallery{display:grid; grid-template-rows:minmax(0,1fr) auto; min-height:0; overflow:hidden;}
-    .modal-media{aspect-ratio:auto; min-height:0; max-height:none; height:100%; touch-action:pan-x; overflow:hidden;}
-    .modal-media img,.modal-media video,.modal-media iframe{width:100%; height:100%; object-fit:contain;}
-    .modal-thumbs{min-height:76px; padding:8px 10px; gap:8px; overflow-x:auto; overflow-y:hidden;}
-    .modal-thumb{width:60px; height:60px;}
-    .modal-info{min-width:0; overflow-y:auto; padding:24px 22px;}
-    .modal-close{top:10px; right:10px;}
-    .modal-nav{top:50%;} 
-  }
-
 </style>
 </head>
 <body>
@@ -274,30 +257,10 @@ let state = { product: null, capinha: null };
 
 function fmtPrice(p){ p = Number(p); return p > 0 ? 'R$ ' + p.toLocaleString('pt-BR') : 'Consultar'; }
 
-function getDriveId(url){
-  if(!url) return null;
-  const m = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=(?:download|view)&)?id=)([a-zA-Z0-9_-]+)/);
-  return m ? m[1] : null;
-}
-
 function toEmbedUrl(url){
   if(!url) return null;
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{6,})/);
-  if(yt) return `https://www.youtube.com/embed/${yt[1]}?playsinline=1&rel=0&modestbranding=1&controls=1`;
-  return null;
-}
-
-function toDirectVideoUrl(url){
-  if(!url) return null;
-  // O Apps Script agora devolve file.getDownloadUrl() para vídeos do Drive.
-  // Nesse caso usamos exatamente essa URL no player HTML5.
-  if(url.includes('drive.usercontent.google.com/download')) {
-    const id = getDriveId(url);
-    return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
-  }
-  if(url.match(/\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i)) return url;
-  const id = getDriveId(url);
-  if(id) return `https://drive.google.com/uc?export=download&id=${id}`;
+  if(yt) return `https://www.youtube.com/embed/${yt[1]}?playsinline=1&rel=0`;
   return null;
 }
 
@@ -476,51 +439,23 @@ function openModal(p){
     const old = media.querySelector('.gallery-main-media');
     if(old) old.remove();
     const embed = toEmbedUrl(p.video);
-    const directVideo = toDirectVideoUrl(p.video);
     const node = document.createElement(embed ? 'iframe' : 'video');
     node.className = 'gallery-main-media';
     if(embed){
       node.src = embed;
       node.allowFullscreen = true;
-      node.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
-      node.setAttribute('title', `Vídeo ${p.modelo}`);
-      node.setAttribute('loading', 'eager');
-      node.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      node.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
     }else{
-      node.src = directVideo || p.video;
       node.controls = true;
       node.autoplay = true;
       node.playsInline = true;
       node.setAttribute('webkit-playsinline', 'true');
-      node.setAttribute('x5-playsinline', 'true');
-        node.preload = 'metadata';
-      node.setAttribute('controlsList', 'nodownload');
-      node.setAttribute('disablepictureinpicture', 'true');
-      node.addEventListener('loadedmetadata', () => {
-        node.play().catch(() => {});
-      }, {once:true});
+      node.preload = 'metadata';
+      node.src = p.video;
       node.addEventListener('error', () => {
-        const id = getDriveId(p.video);
-        if(id && !node.dataset.fallback){
-          node.dataset.fallback = '1';
-          const retry = document.createElement('video');
-          retry.className = 'gallery-main-media';
-          retry.src = `https://drive.google.com/uc?export=download&id=${id}`;
-          retry.controls = true;
-          retry.playsInline = true;
-          retry.setAttribute('webkit-playsinline', 'true');
-          retry.preload = 'auto';
-          retry.setAttribute('controlsList', 'nodownload');
-          retry.addEventListener('loadedmetadata', () => retry.play().catch(() => {}), {once:true});
-          retry.addEventListener('error', () => {
-            const msg = document.createElement('div');
-            msg.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:#fff;background:#050505;font-size:15px;';
-            msg.textContent='Não foi possível reproduzir este vídeo diretamente. Tente tocar novamente.';
-            media.insertBefore(msg, media.querySelector('.modal-prev'));
-            retry.remove();
-          }, {once:true});
-          node.replaceWith(retry);
-        }
+        node.controls = false;
+        node.poster = '';
+        node.insertAdjacentHTML('afterend', '<div style="position:absolute;inset:auto 12px 12px;z-index:5;background:rgba(0,0,0,.75);padding:10px;border-radius:8px;text-align:center;color:#fff;font-size:13px">Não foi possível reproduzir este vídeo.</div>');
       }, {once:true});
     }
     media.insertBefore(node, media.querySelector('.modal-prev'));
