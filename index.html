@@ -289,9 +289,12 @@ function toEmbedUrl(url){
 
 function toDirectVideoUrl(url){
   if(!url) return null;
+  // O Apps Script agora devolve file.getDownloadUrl() para vídeos do Drive.
+  // Nesse caso usamos exatamente essa URL no player HTML5.
+  if(url.includes('drive.usercontent.google.com/download')) return url;
   if(url.match(/\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i)) return url;
   const id = getDriveId(url);
-  if(id) return `https://drive.usercontent.google.com/download?id=${id}&export=download`;
+  if(id) return `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`;
   return null;
 }
 
@@ -487,16 +490,30 @@ function openModal(p){
       node.playsInline = true;
       node.setAttribute('webkit-playsinline', 'true');
       node.setAttribute('x5-playsinline', 'true');
-      node.preload = 'auto';
+        node.preload = 'metadata';
       node.setAttribute('controlsList', 'nodownload');
+      node.setAttribute('disablepictureinpicture', 'true');
       node.addEventListener('loadedmetadata', () => {
         node.play().catch(() => {});
       }, {once:true});
       node.addEventListener('error', () => {
+        // Segunda tentativa: URL pública direta do Drive. Não voltamos para
+        // o iframe /preview, que é justamente o player que apresentou
+        // comportamento instável no Safari/iPhone.
         const id = getDriveId(p.video);
         if(id && !node.dataset.fallback){
           node.dataset.fallback = '1';
-          node.outerHTML = `<iframe class="gallery-main-media" src="https://drive.google.com/file/d/${id}/preview" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" title="Vídeo ${p.modelo}"></iframe>`;
+          const retry = document.createElement('video');
+          retry.className = 'gallery-main-media';
+          retry.src = `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`;
+          retry.controls = true;
+          retry.autoplay = true;
+          retry.playsInline = true;
+          retry.setAttribute('webkit-playsinline', 'true');
+          retry.preload = 'metadata';
+          retry.setAttribute('controlsList', 'nodownload');
+          retry.addEventListener('loadedmetadata', () => retry.play().catch(() => {}), {once:true});
+          node.replaceWith(retry);
         }
       }, {once:true});
     }
