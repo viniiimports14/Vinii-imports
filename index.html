@@ -258,22 +258,24 @@ let state = { product: null, capinha: null };
 
 function fmtPrice(p){ p = Number(p); return p > 0 ? 'R$ ' + p.toLocaleString('pt-BR') : 'Consultar'; }
 
+function getDriveId(url){
+  if(!url) return null;
+  const m = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=(?:download|view)&)?id=)([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
 function toEmbedUrl(url){
   if(!url) return null;
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{6,})/);
   if(yt) return `https://www.youtube.com/embed/${yt[1]}?playsinline=1&rel=0&modestbranding=1&controls=1`;
-
-  // Google Drive: use the preview player instead of the download URL.
-  // The download endpoint often fails inside <video> on iPhone/mobile browsers.
-  const drive = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=(?:download|view)&)?id=)([a-zA-Z0-9_-]+)/);
-  if(drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
-
   return null;
 }
 
 function toDirectVideoUrl(url){
   if(!url) return null;
   if(url.match(/\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i)) return url;
+  const id = getDriveId(url);
+  if(id) return `https://drive.usercontent.google.com/download?id=${id}&export=download`;
   return null;
 }
 
@@ -468,7 +470,19 @@ function openModal(p){
       node.autoplay = true;
       node.playsInline = true;
       node.setAttribute('webkit-playsinline', 'true');
-      node.preload = 'metadata';
+      node.setAttribute('x5-playsinline', 'true');
+      node.preload = 'auto';
+      node.setAttribute('controlsList', 'nodownload');
+      node.addEventListener('loadedmetadata', () => {
+        node.play().catch(() => {});
+      }, {once:true});
+      node.addEventListener('error', () => {
+        const id = getDriveId(p.video);
+        if(id && !node.dataset.fallback){
+          node.dataset.fallback = '1';
+          node.outerHTML = `<iframe class="gallery-main-media" src="https://drive.google.com/file/d/${id}/preview" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" title="Vídeo ${p.modelo}"></iframe>`;
+        }
+      }, {once:true});
     }
     media.insertBefore(node, media.querySelector('.modal-prev'));
     counter.textContent = 'VÍDEO';
