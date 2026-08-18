@@ -147,6 +147,17 @@
   .modal-media:fullscreen .modal-nav,.modal-media:-webkit-full-screen .modal-nav{z-index:20;}
   .modal-media:fullscreen .modal-counter,.modal-media:-webkit-full-screen .modal-counter{z-index:20;}
   .modal-media:fullscreen .modal-fullscreen,.modal-media:-webkit-full-screen .modal-fullscreen{z-index:20;}
+
+  /* Fallback universal para celulares quando a API Fullscreen for recusada. */
+  .modal-overlay.css-fullscreen{padding:0 !important; align-items:stretch !important; justify-content:stretch !important; background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;}
+  .modal-overlay.css-fullscreen .modal-box{width:100vw !important; max-width:none !important; height:100vh !important; max-height:none !important; border:0 !important; border-radius:0 !important; overflow:hidden !important; background:#000 !important;}
+  .modal-overlay.css-fullscreen .modal-grid{display:block !important; width:100%; height:100%;}
+  .modal-overlay.css-fullscreen .modal-gallery{width:100%; height:100%;}
+  .modal-overlay.css-fullscreen .modal-media{width:100%; height:100% !important; max-height:none !important; min-height:0 !important; aspect-ratio:auto !important; background:#000;}
+  .modal-overlay.css-fullscreen .gallery-main-media{width:100%; height:100%; object-fit:contain;}
+  .modal-overlay.css-fullscreen .modal-thumbs,.modal-overlay.css-fullscreen .modal-info{display:none !important;}
+  .modal-overlay.css-fullscreen .modal-close{z-index:30; top:max(12px, env(safe-area-inset-top)); right:max(12px, env(safe-area-inset-right));}
+  .modal-overlay.css-fullscreen .modal-fullscreen{z-index:30; top:max(12px, env(safe-area-inset-top)); right:max(58px, calc(env(safe-area-inset-right) + 46px));}
   .modal-counter{position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:4; padding:6px 11px; border-radius:20px; background:rgba(0,0,0,.62); color:#fff; font:11px 'IBM Plex Mono',monospace; letter-spacing:.04em; border:1px solid rgba(255,255,255,.16); pointer-events:none;}
   .modal-thumbs{display:flex; gap:10px; padding:12px; overflow-x:auto; background:#0b0b0c; scrollbar-width:thin;}
   .modal-thumb{position:relative; width:72px; height:72px; flex-shrink:0; border-radius:8px; overflow:hidden; border:2px solid transparent; cursor:pointer; background:#171719;}
@@ -492,23 +503,72 @@ function openModal(p){
   media.querySelector('.modal-prev').addEventListener('click', () => goMedia(current - 1));
   media.querySelector('.modal-next').addEventListener('click', () => goMedia(current + 1));
 
+  function isCssFullscreen(){
+    return document.getElementById('modal-overlay').classList.contains('css-fullscreen');
+  }
+
+  function setCssFullscreen(active){
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.toggle('css-fullscreen', active);
+    document.body.style.overflow = active ? 'hidden' : '';
+    updateFullscreenLabel();
+  }
+
+  function isCssFullscreen(){
+    return document.getElementById('modal-overlay').classList.contains('css-fullscreen');
+  }
+
+  function setCssFullscreen(active){
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.toggle('css-fullscreen', active);
+    document.body.style.overflow = active ? 'hidden' : '';
+    updateFullscreenLabel();
+  }
+
   fullscreenBtn.addEventListener('click', async () => {
-    try{
-      if(document.fullscreenElement || document.webkitFullscreenElement){
+    const activeNative = !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+    if(isCssFullscreen()){
+      setCssFullscreen(false);
+      return;
+    }
+
+    if(activeNative){
+      try{
         if(document.exitFullscreen) await document.exitFullscreen();
         else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
-      }else{
-        if(media.requestFullscreen) await media.requestFullscreen();
-        else if(media.webkitRequestFullscreen) media.webkitRequestFullscreen();
-      }
-    }catch(err){
-      // Alguns navegadores bloqueiam fullscreen em arquivos locais; não interrompe a galeria.
+      }catch(err){}
+      return;
     }
+
+    // No iPhone, vídeo HTML5 pode usar a tela cheia própria do Safari.
+    const currentMedia = media.querySelector('.gallery-main-media');
+    if(currentMedia && currentMedia.tagName === 'VIDEO' && typeof currentMedia.webkitEnterFullscreen === 'function'){
+      try{
+        currentMedia.webkitEnterFullscreen();
+        return;
+      }catch(err){}
+    }
+
+    // Para fotos, iframes e navegadores que recusam requestFullscreen(),
+    // usamos um modo de tela cheia por CSS que funciona no celular.
+    try{
+      if(media.requestFullscreen){
+        await media.requestFullscreen();
+        return;
+      }
+      if(media.webkitRequestFullscreen){
+        await media.webkitRequestFullscreen();
+        return;
+      }
+    }catch(err){}
+
+    setCssFullscreen(true);
   });
 
   function updateFullscreenLabel(){
-    const active = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    fullscreenBtn.textContent = active ? '⛶' : '⛶';
+    const active = isCssFullscreen() || !!(document.fullscreenElement || document.webkitFullscreenElement);
+    fullscreenBtn.textContent = active ? '×' : '⛶';
     fullscreenBtn.title = active ? 'Sair da tela cheia' : 'Maximizar';
     fullscreenBtn.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Tela cheia');
   }
@@ -541,7 +601,13 @@ function openModal(p){
 }
 
 function closeModal(){
-  document.getElementById('modal-overlay').classList.remove('active');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.remove('active','css-fullscreen');
+  document.body.style.overflow = '';
+  try{
+    if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+    else if(document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }catch(err){}
   document.getElementById('modal-media').innerHTML = '';
 }
 
