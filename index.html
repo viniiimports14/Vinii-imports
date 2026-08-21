@@ -1234,20 +1234,54 @@ if(premiumUpgradeLink) premiumUpgradeLink.addEventListener('click', openUpgradeF
       </div>`;
 
     const descriptionEl = document.getElementById('modal-product-description');
-    const rawDescription = p.detalhes ?? p.descricao ?? p.descrição ?? p.observacoes ?? p.observações ?? p.defeitos ?? '';
-    let descriptionItems = Array.isArray(rawDescription)
-      ? rawDescription
-      : String(rawDescription || '').split(/\\r?\\n|\\|/).map(v => v.trim()).filter(Boolean);
+    let rawDescription = p.detalhes ?? p.descricao ?? p.descrição ?? p.observacoes ?? p.observações ?? p.defeitos ?? '';
 
-    if(!descriptionItems.length){
+    // Corrige qualquer formato vindo da API: texto, array ou JSON de array.
+    let descriptionText = '';
+    if (Array.isArray(rawDescription)) {
+      descriptionText = rawDescription.join('');
+    } else if (typeof rawDescription === 'string') {
+      const trimmed = rawDescription.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          descriptionText = Array.isArray(parsed) ? parsed.join('') : trimmed;
+        } catch {
+          descriptionText = rawDescription;
+        }
+      } else {
+        descriptionText = rawDescription;
+      }
+    } else if (rawDescription && typeof rawDescription === 'object') {
+      descriptionText = Object.values(rawDescription).join('');
+    }
+
+    descriptionText = String(descriptionText || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+
+    // Cada linha ou "|" vira uma observação. Sem separador, fica uma única observação.
+    let descriptionItems = descriptionText
+      .split(/\n|\|/)
+      .map(v => v.trim())
+      .filter(Boolean);
+
+    if (!descriptionItems.length) {
       descriptionItems = [
-        `Aparelho ${(p.condicao||'seminovo').toLowerCase()} em ótimo estado`,
+        `Aparelho ${(p.condicao || 'seminovo').toLowerCase()} em ótimo estado`,
         '100% funcional',
         'Testado e aprovado por nossa equipe',
         'Garantia Vinii Imports'
       ];
     }
-    descriptionEl.innerHTML = descriptionItems.map(item => `<li>${item}</li>`).join('');
+
+    descriptionEl.innerHTML = descriptionItems.map(item => {
+      const safe = String(item).replace(/[&<>"]/g, ch => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'
+      }[ch]));
+      return `<li>${safe}</li>`;
+    }).join('');
+
 
     document.querySelectorAll('#modal-case-preview .case-chip').forEach(btn => {
       btn.addEventListener('click', () => {
