@@ -755,56 +755,88 @@ function toEmbedUrl(url){
   return null;
 }
 
-async function loadProducts(){
-  const grid = document.getElementById('product-grid');
+const PRODUCTS_CACHE_KEY = 'vinii_products_cache_v2';
+const CAPINHAS_CACHE_KEY = 'vinii_capinhas_cache_v2';
+const PRODUCTS_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // cache local usado para abrir a página instantaneamente; os dados novos entram em segundo plano
+const CAPINHAS_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
+
+function readCache(key, maxAge){
   try{
-    const res = await fetch(`${API_URL}?action=getProducts`);
-    PRODUCTS = await res.json();
-  }catch(err){
-    grid.innerHTML = '<div class="empty-note">Não foi possível carregar os produtos agora. Tente recarregar a página.</div>';
-    return;
-  }
+    const raw = localStorage.getItem(key);
+    if(!raw) return null;
+    const item = JSON.parse(raw);
+    if(!item || !Array.isArray(item.data) || Date.now() - Number(item.time || 0) > maxAge) return null;
+    return item.data;
+  }catch(e){ return null; }
+}
+function writeCache(key, data){
+  try{ localStorage.setItem(key, JSON.stringify({time:Date.now(),data})); }catch(e){}
+}
+
+function renderProducts(openUrl=true){
+  const grid = document.getElementById('product-grid');
   if(!PRODUCTS.length){
     grid.innerHTML = '<div class="empty-note">Nenhum aparelho disponível no momento. Volte em breve!</div>';
     return;
   }
   grid.innerHTML = '';
-  PRODUCTS.forEach(p => {
-    const foto1 = p.fotos[0] || 'https://placehold.co/500x500/131316/8b8d93?text=Foto';
+  PRODUCTS.forEach((p, index) => {
+    const foto1 = p.fotos?.[0] || 'https://placehold.co/500x500/131316/8b8d93?text=Foto';
     const card = document.createElement('div');
     card.className = 'product-card';
     card.dataset.id = p.id;
     card.innerHTML = `
       <div class="photo-strip">
-        <img src="${foto1}" alt="${p.modelo}">
+        <img src="${foto1}" alt="${p.modelo}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${index === 0 ? 'high' : 'auto'}">
         ${p.video ? '<span class="video-badge">▶ vídeo</span>' : ''}
       </div>
       <div class="product-body">
         <span class="badge ${p.condicao === 'Lacrado' ? 'lacrado' : 'seminovo'}">${p.condicao}</span>
         <h3>${p.modelo}</h3>
-        ${((p.UltimaUnidade===true||p.UltimaUnidade==='TRUE') ? '<div class="stock-alert">🔥 Última unidade</div>' : (p.Apenas1===true||p.Apenas1==='TRUE') ? '<div class="stock-alert">⚡ Apenas 1</div>' : '')}
+        ${(
+  [p.UltimaUnidade,p.ultimaUnidade,p.ULTIMAUNIDADE,p['ÚltimaUnidade'],p['ULTIMA UNIDADE']]
+    .some(v => v === true || v === 1 || String(v).trim().toUpperCase() === 'TRUE' || String(v).trim() === '1' || String(v).trim().toUpperCase() === 'SIM')
+    ? '<div class="stock-alert">🔥 Última unidade</div>'
+    : [p.Apenas1,p.apenas1,p.Apenas_1,p['Apenas 1'],p['APENAS 1']]
+      .some(v => v === true || v === 1 || String(v).trim().toUpperCase() === 'TRUE' || String(v).trim() === '1' || String(v).trim().toUpperCase() === 'SIM')
+      ? '<div class="stock-alert">⚡ Apenas 1</div>'
+      : ''
+)}
         <p class="spec" style="color:var(--ink-dim); font-size:12px;">${[p.cor, p.saudeBateria ? 'Bateria ' + p.saudeBateria + '%' : ''].filter(Boolean).join(' · ')}</p>
         <div class="price-row"><span class="price">${fmtPrice(p.preco)}</span><span class="pick-note">selecionado ✓</span></div>
       </div>`;
     card.addEventListener('click', () => openModal(p));
     grid.appendChild(card);
   });
-  maybeOpenFromUrl();
+  if(openUrl) maybeOpenFromUrl();
 }
 
-async function loadCapinhas(modelo){
-  const grid = document.getElementById('capinha-grid');
-  grid.innerHTML = '<div class="empty-note">Carregando capinhas…</div>';
-  document.getElementById('to-step-4').disabled = true;
-  state.capinha = null;
-  try{
-    const res = await fetch(`${API_URL}?action=getCapinhas&modelo=${encodeURIComponent(modelo || '')}`);
-    const data = await res.json();
-    CAPINHAS = Array.isArray(data) ? data : [];
-  }catch(err){
-    CAPINHAS = [];
+async function loadProducts(){
+  const grid = document.getElementById('product-grid');
+  const cached = readCache(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_MAX_AGE);
+  if(cached?.length){
+    PRODUCTS = cached;
+    renderProducts(false);
   }
 
+  // Não bloqueia a tela esperando o Apps Script. O cache aparece primeiro e os dados novos chegam depois.
+  try{
+    const res = await fetch(`${API_URL}?action=getProducts`, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const fresh = await res.json();
+    if(!Array.isArray(fresh)) throw new Error('Resposta inválida');
+    PRODUCTS = fresh;
+    writeCache(PRODUCTS_CACHE_KEY, PRODUCTS);
+    renderProducts();
+  }catch(err){
+    if(!PRODUCTS.length){
+      grid.innerHTML = '<div class="empty-note">Não foi possível carregar os produtos agora. Tente recarregar a página.</div>';
+    }
+  }
+}
+
+function renderCapinhas(){
+  const grid = document.getElementById('capinha-grid');
   if(!CAPINHAS.length){
     grid.innerHTML = '<div class="empty-note">Nenhuma capinha disponível para este modelo no momento.<br><small>Você pode continuar sem capinha.</small></div>';
     const next=document.getElementById('to-step-4'); next.disabled=false; next.textContent='Continuar sem capinha';
@@ -820,6 +852,36 @@ async function loadCapinhas(modelo){
     el.addEventListener('click', () => selectCapinha(c.id, c.nome));
     grid.appendChild(el);
   });
+}
+
+async function loadCapinhas(modelo){
+  const grid = document.getElementById('capinha-grid');
+  const next = document.getElementById('to-step-4');
+  const key = `${CAPINHAS_CACHE_KEY}_${String(modelo || '').trim().toLowerCase()}`;
+  grid.innerHTML = '<div class="empty-note">Carregando capinhas…</div>';
+  next.disabled = true;
+  state.capinha = null;
+
+  const cached = readCache(key, CAPINHAS_CACHE_MAX_AGE);
+  if(cached){
+    CAPINHAS = cached;
+    renderCapinhas();
+  }
+
+  // Busca atualizada em segundo plano; na próxima vez a resposta já estará em cache.
+  try{
+    const res = await fetch(`${API_URL}?action=getCapinhas&modelo=${encodeURIComponent(modelo || '')}`, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    CAPINHAS = Array.isArray(data) ? data : [];
+    writeCache(key, CAPINHAS);
+    renderCapinhas();
+  }catch(err){
+    if(!cached){
+      CAPINHAS = [];
+      renderCapinhas();
+    }
+  }
 }
 
 function selectProduct(id){
@@ -1344,7 +1406,7 @@ if(premiumUpgradeLink) premiumUpgradeLink.addEventListener('click', openUpgradeF
       thumbs.querySelectorAll('.modal-thumb').forEach((x,i)=>x.classList.toggle('active',i===current));
     }
     function go(i){current=(i+total)%total;render()}
-    photos.forEach((src,i)=>{const t=document.createElement('div');t.className='modal-thumb'+(i===0?' active':'');t.innerHTML=`<img src="${src}" alt="Miniatura">`;t.onclick=()=>go(i);thumbs.appendChild(t)});
+    photos.forEach((src,i)=>{const t=document.createElement('div');t.className='modal-thumb'+(i===0?' active':'');t.innerHTML=`<img src="${src}" alt="Miniatura" loading="lazy" decoding="async">`;t.onclick=()=>go(i);thumbs.appendChild(t)});
     if(hasVideo){const t=document.createElement('div');t.className='modal-thumb video-thumb';t.textContent='▶';t.onclick=()=>go(photos.length);thumbs.appendChild(t)}
     media.querySelector('.modal-prev').onclick=()=>go(current-1);media.querySelector('.modal-next').onclick=()=>go(current+1);
     fs.onclick=()=>{if(document.fullscreenElement){document.exitFullscreen?.();return} if(media.requestFullscreen)media.requestFullscreen().catch(()=>overlay.classList.add('css-fullscreen'));else overlay.classList.add('css-fullscreen')};
