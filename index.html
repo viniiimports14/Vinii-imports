@@ -590,6 +590,11 @@ header .logo-wrap img{
 .why-vinii{max-width:1200px;margin:18px auto 20px;padding:0 22px 24px;position:relative;z-index:1}.why-vinii-head{text-align:center;border-top:1px solid var(--line);padding-top:28px}.why-vinii-head span{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}.why-vinii-head h2{font-size:25px;margin:6px 0 5px}.why-vinii-head p{font-size:13px;color:var(--ink-dim)}.why-vinii-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.why-item{display:flex;gap:10px;align-items:flex-start;padding:15px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02)}.why-item>span{color:var(--gold-hi);font-size:17px;line-height:1}.why-item strong{display:block;font-size:12px}.why-item small{display:block;color:var(--ink-dim);font-size:10px;line-height:1.4;margin-top:3px}.whatsapp-float{position:fixed;right:18px;bottom:18px;z-index:45;display:flex;align-items:center;gap:7px;padding:10px 13px;border-radius:999px;background:#168c4b;color:#fff;text-decoration:none;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:11px;font-weight:700}.whatsapp-float span{font-size:16px}.whatsapp-float b{font-weight:700}.installment-box{margin:12px 0 4px;padding:13px 14px;border:1px solid rgba(212,175,55,.2);border-radius:12px;background:rgba(212,175,55,.04)}.installment-label{font:600 10px 'IBM Plex Mono',monospace;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.installment-row{display:flex;gap:10px;align-items:center}.installment-row select{min-width:92px;padding:10px;border-radius:9px;background:#0d0d0e;color:var(--ink);border:1px solid var(--line)}.installment-row strong{font-size:14px;color:var(--gold-hi)}.installment-box small{display:block;color:var(--ink-dim);font-size:9px;margin-top:6px}.stock-alert{display:inline-flex;align-items:center;gap:5px;margin:7px 0 0;padding:5px 8px;border-radius:999px;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.25);color:#f1d36a;font:700 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
 @media(max-width:800px){.why-vinii-grid{grid-template-columns:repeat(2,1fr)}.why-vinii{padding:0 18px 18px}.whatsapp-float{right:12px;bottom:12px}.installment-row{align-items:stretch;flex-direction:column}.installment-row select{width:100%}}
 @media(max-width:480px){.why-vinii-grid{gap:7px}.why-item{padding:11px}.why-item small{font-size:9px}.why-item strong{font-size:11px}.whatsapp-float b{display:none}.whatsapp-float{width:42px;height:42px;justify-content:center;padding:0}.catalog-tools{margin-bottom:14px}}
+
+/* EM BREVE */
+.em-breve-section{max-width:1200px;margin:6px auto 22px;padding:0 22px;position:relative;z-index:1}.em-breve-head{text-align:center;border-top:1px solid var(--line);padding-top:28px}.em-breve-head .kicker{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}.em-breve-head h2{font-size:25px;margin:6px 0 5px}.em-breve-head p{font-size:13px;color:var(--ink-dim);margin:0}.em-breve-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.em-breve-card{border:1px solid rgba(212,175,55,.22);border-radius:16px;background:linear-gradient(145deg,rgba(212,175,55,.07),rgba(255,255,255,.02));overflow:hidden}.em-breve-photo{height:210px;background:#0d0d0e;display:flex;align-items:center;justify-content:center;overflow:hidden}.em-breve-photo img{width:100%;height:100%;object-fit:cover}.em-breve-placeholder{font-size:48px;opacity:.65}.em-breve-body{padding:15px}.em-breve-status{display:inline-flex;padding:5px 8px;border-radius:999px;border:1px solid rgba(212,175,55,.28);background:rgba(212,175,55,.08);color:var(--gold-hi);font:700 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}.em-breve-body h3{margin:9px 0 4px;font-size:17px}.em-breve-spec{margin:0;color:var(--ink-dim);font-size:12px}.em-breve-notify{display:block;margin-top:13px;text-align:center;padding:10px 12px;border-radius:10px;background:rgba(212,175,55,.09);border:1px solid rgba(212,175,55,.2);color:var(--gold-hi);text-decoration:none;font-size:11px;font-weight:700}.em-breve-empty{display:none}
+@media(max-width:800px){.em-breve-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.em-breve-section{padding:0 18px}.em-breve-grid{grid-template-columns:1fr}.em-breve-photo{height:230px}}
 </style>
 </head>
 <body>
@@ -678,6 +683,11 @@ header .logo-wrap img{
   </section>
 </main>
 
+<section class="em-breve-section" id="em-breve-section" aria-label="Em breve na Vinii Imports" style="display:none">
+  <div class="em-breve-head"><div class="kicker">Novidades chegando</div><h2>Em breve na Vinii Imports</h2><p>Alguns aparelhos já estão a caminho. Fique de olho para não perder.</p></div>
+  <div class="em-breve-grid" id="em-breve-grid"></div>
+</section>
+
 <section class="why-vinii" aria-label="Por que comprar na Vinii Imports">
   <div class="why-vinii-head"><span>Vinii Imports</span><h2>Por que comprar com a gente?</h2><p>Qualidade, segurança e atendimento direto para você comprar com confiança.</p></div>
   <div class="why-vinii-grid">
@@ -732,6 +742,37 @@ const WHATSAPP_NUMBER = '5522999426581';
 
 let PRODUCTS = [];
 let CAPINHAS = [];
+
+// Os aparelhos 'Em breve' agora vêm automaticamente do Apps Script/ADM.
+let EM_BREVE = [];
+
+function renderEmBreve(){
+  const section=document.getElementById('em-breve-section');
+  const grid=document.getElementById('em-breve-grid');
+  if(!section || !grid) return;
+  if(!Array.isArray(EM_BREVE) || !EM_BREVE.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  grid.innerHTML=EM_BREVE.map(item=>{
+    const modelo=item.modelo || 'iPhone';
+    const specs=[item.capacidade,item.cor].filter(Boolean).join(' · ');
+    const previsao=item.previsao ? `<p class="em-breve-spec" style="margin-top:5px;color:var(--gold-hi)">Previsão: ${String(item.previsao).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : '';
+    const foto=item.fotos?.[0] || item.foto || '';
+    const fotoHtml=foto ? `<img src="${foto}" alt="${modelo}" loading="lazy" decoding="async">` : '<div class="em-breve-placeholder"></div>';
+    const msg=encodeURIComponent(`Olá! Vi o ${modelo}${item.capacidade ? ' '+item.capacidade : ''} na seção “Em breve” da Vinii Imports e quero ser avisado quando chegar.`);
+    return `<article class="em-breve-card"><div class="em-breve-photo">${fotoHtml}</div><div class="em-breve-body"><span class="em-breve-status">📦 Em breve</span><h3>${modelo}</h3><p class="em-breve-spec">${specs || 'Novo aparelho chegando'}</p>${previsao}<a class="em-breve-notify" href="https://wa.me/${WHATSAPP_NUMBER}?text=${msg}" target="_blank" rel="noopener">Quero ser avisado</a></div></article>`;
+  }).join('');
+}
+
+async function loadComingSoon(){
+  try{
+    const res=await fetch(`${API_URL}?action=getComingSoon`,{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const fresh=await res.json();
+    EM_BREVE=Array.isArray(fresh)?fresh:[];
+    renderEmBreve();
+  }catch(e){ renderEmBreve(); }
+}
+
 let state = { product: null, capinha: null, leadName: '', leadWhatsApp: '', installment: 12, pendingSaved: false };
 
 function fmtPrice(p){ p = Number(p); return p > 0 ? 'R$ ' + p.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : 'Consultar'; }
@@ -1165,6 +1206,7 @@ function maybeOpenFromUrl(){
   }
 }
 
+loadComingSoon();
 loadProducts();
 const productSearch=document.getElementById('product-search');
 if(productSearch) productSearch.addEventListener('input',()=>{const q=productSearch.value.trim().toLowerCase();document.querySelectorAll('#product-grid .product-card').forEach(card=>{const p=PRODUCTS.find(x=>String(x.id)===String(card.dataset.id));const hay=p?[p.modelo,p.cor,p.condicao,p.saudeBateria].filter(Boolean).join(' ').toLowerCase():card.textContent.toLowerCase();card.style.display=hay.includes(q)?'':'none';});});
