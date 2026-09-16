@@ -743,8 +743,41 @@ const WHATSAPP_NUMBER = '5522999426581';
 let PRODUCTS = [];
 let CAPINHAS = [];
 
-// Os aparelhos 'Em breve' agora vêm automaticamente do Apps Script/ADM.
+// Os aparelhos 'Em breve' vêm automaticamente do Apps Script/ADM.
+// O cache faz a seção aparecer imediatamente no Safari/Chrome quando já houver
+// dados salvos, enquanto a lista é atualizada em segundo plano.
 let EM_BREVE = [];
+const EM_BREVE_CACHE_KEY = 'vinii_em_breve_cache_v1';
+const EM_BREVE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+
+function readEmBreveCache(){
+  try{
+    const raw=localStorage.getItem(EM_BREVE_CACHE_KEY);
+    if(!raw) return null;
+    const cached=JSON.parse(raw);
+    if(!cached || !Array.isArray(cached.data)) return null;
+    return cached;
+  }catch(e){ return null; }
+}
+
+function writeEmBreveCache(data){
+  try{
+    localStorage.setItem(EM_BREVE_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      data: Array.isArray(data) ? data : []
+    }));
+  }catch(e){}
+}
+
+function loadEmBreveFromCache(){
+  const cached=readEmBreveCache();
+  if(cached && Array.isArray(cached.data)){
+    EM_BREVE=cached.data;
+    renderEmBreve();
+    return cached;
+  }
+  return null;
+}
 
 function renderEmBreve(){
   const section=document.getElementById('em-breve-section');
@@ -752,26 +785,34 @@ function renderEmBreve(){
   if(!section || !grid) return;
   if(!Array.isArray(EM_BREVE) || !EM_BREVE.length){ section.style.display='none'; return; }
   section.style.display='block';
-  grid.innerHTML=EM_BREVE.map(item=>{
+  grid.innerHTML=EM_BREVE.map((item,index)=>{
     const modelo=item.modelo || 'iPhone';
     const specs=[item.capacidade,item.cor].filter(Boolean).join(' · ');
     const previsao=item.previsao ? `<p class="em-breve-spec" style="margin-top:5px;color:var(--gold-hi)">Previsão: ${String(item.previsao).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : '';
     const foto=item.fotos?.[0] || item.foto || '';
-    const fotoHtml=foto ? `<img src="${foto}" alt="${modelo}" loading="lazy" decoding="async">` : '<div class="em-breve-placeholder"></div>';
+    const fotoHtml=foto ? `<img src="${foto}" alt="${modelo}" loading="${index===0?'eager':'lazy'}" decoding="async"${index===0?' fetchpriority="high"':''}>` : '<div class="em-breve-placeholder"></div>';
     const msg=encodeURIComponent(`Olá! Vi o ${modelo}${item.capacidade ? ' '+item.capacidade : ''} na seção “Em breve” da Vinii Imports e quero ser avisado quando chegar.`);
     return `<article class="em-breve-card"><div class="em-breve-photo">${fotoHtml}</div><div class="em-breve-body"><span class="em-breve-status">📦 Em breve</span><h3>${modelo}</h3><p class="em-breve-spec">${specs || 'Novo aparelho chegando'}</p>${previsao}<a class="em-breve-notify" href="https://wa.me/${WHATSAPP_NUMBER}?text=${msg}" target="_blank" rel="noopener">Quero ser avisado</a></div></article>`;
   }).join('');
 }
 
 async function loadComingSoon(){
+  // Se já existe cache, a seção já foi exibida. Aqui só atualizamos em segundo plano.
   try{
     const res=await fetch(`${API_URL}?action=getComingSoon`,{cache:'no-store'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const fresh=await res.json();
     EM_BREVE=Array.isArray(fresh)?fresh:[];
+    writeEmBreveCache(EM_BREVE);
     renderEmBreve();
-  }catch(e){ renderEmBreve(); }
+  }catch(e){
+    // Mantém o cache que já foi exibido, sem esconder a seção.
+    renderEmBreve();
+  }
 }
+
+// Mostra o último resultado salvo antes de consultar o Apps Script.
+loadEmBreveFromCache();
 
 let state = { product: null, capinha: null, leadName: '', leadWhatsApp: '', installment: 12, pendingSaved: false };
 
