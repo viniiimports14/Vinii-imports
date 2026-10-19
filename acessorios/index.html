@@ -68,8 +68,9 @@ function orderJsonp(params){return new Promise((resolve,reject)=>{
  script.src=API_URL+'?'+new URLSearchParams({...params,callback,_:Date.now()});script.referrerPolicy='no-referrer';
  timer=setTimeout(()=>{clean();reject(Error('A consulta do pedido demorou.'))},8000);document.head.append(script);
 })}
-async function recoverOrder(payload){
- const params={action:'getAccessoryOrder',requestId:payload.requestId,proof:await orderProof(payload)},url=API_URL+'?'+new URLSearchParams({...params,_:Date.now()});
+async function recoverOrder(payload){return recoverOrderByProof({requestId:payload.requestId,proof:await orderProof(payload)})}
+async function recoverOrderByProof(lookup){
+ const params={action:'getAccessoryOrder',requestId:lookup.requestId,proof:lookup.proof},url=API_URL+'?'+new URLSearchParams({...params,_:Date.now()});
  let result;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),4000);
  try{const response=await fetch(url,{cache:'no-store',credentials:'omit',signal:ctrl.signal});if(!response.ok)throw Error('Conexão indisponível.');result=await response.json()}
  catch(_){result=await orderJsonp(params)}finally{clearTimeout(timer)}
@@ -86,25 +87,26 @@ function recoveryContact(){
  return 'https://wa.me/'+String(data.payment.whatsapp||WHATSAPP_NUMBER).replace(/\D/g,'')+'?text='+encodeURIComponent(text);
 }
 function renderRecovery(){content.innerHTML=`<div class="acc-summary"><h3>${loading?'Confirmando seu pedido…':'Vamos conferir seu pedido'}</h3><p class="acc-muted">Se o pedido já foi registrado, vamos abrir a confirmação sem criar outra compra.</p><div class="acc-actions"><button class="acc-button" id="acc-retry" ${loading?'disabled':''}>${loading?'Conferindo…':'Conferir e continuar'}</button><a class="acc-button secondary" href="${esc(recoveryContact())}" target="_blank" rel="noopener">Conversar com um atendente</a></div><p class="acc-muted">Se a conexão continuar falhando, o atendente pode localizar esta tentativa e ajudar a finalizar.</p></div>`;$('acc-retry').onclick=submitPending}
-function finishConfirmedOrder(result){
- lastOrder=result.order;session.set('vinii_acc_last_order',lastOrder);pending=null;pendingSent=false;session.set('vinii_acc_pending',null);
+async function finishConfirmedOrder(result){
+ if(pending){try{orderLookup={requestId:pending.requestId,proof:await orderProof(pending)};session.set('vinii_acc_order_lookup',orderLookup)}catch(_){}}
+ lastOrder={...result.order,clockOffset:Number(result.order.servidorAgora||Date.now())-Date.now()};session.set('vinii_acc_last_order',lastOrder);pending=null;pendingSent=false;session.set('vinii_acc_pending',null);
  if(lastOrder.status==='Cancelado'){view='cart';render();message('Este pedido foi cancelado pela loja. Confira seu carrinho para fazer uma nova compra.');return}
  cart={};saveCart();draft={};view='success';render();load().catch(()=>{});
 }
 async function submitPending(){
  if(loading||!pending)return;loading=true;const payload=pending;renderRecovery();message(pendingSent?'Consultando a confirmação do seu pedido…':'Enviando pedido…');
  try{
-   if(pendingSent){try{const previous=await recoverOrder(payload);if(previous){finishConfirmedOrder(previous);return}}catch(_){}}
+   if(pendingSent){try{const previous=await recoverOrder(payload);if(previous){await finishConfirmedOrder(previous);return}}catch(_){}}
    pendingSent=true;
-   try{const result=await request('createAccessoryOrder',payload);if(!result.ok||!result.order)throw Error('Resposta incompleta.');finishConfirmedOrder(result);return}
+   try{const result=await request('createAccessoryOrder',payload);if(!result.ok||!result.order)throw Error('Resposta incompleta.');await finishConfirmedOrder(result);return}
    catch(error){if(error.definitive)throw error;}
    message('Pedido enviado. Conferindo a confirmação…');
-   try{const previous=await recoverOrder(payload);if(previous){finishConfirmedOrder(previous);return}}catch(_){}
+   try{const previous=await recoverOrder(payload);if(previous){await finishConfirmedOrder(previous);return}}catch(_){}
    // Alternativa de transporte; o resultado só é aceito após consulta autenticada pelo hash.
    await sendOrderWithoutReading(payload);
    for(let attempt=0;attempt<2;attempt++){
      if(attempt)await new Promise(resolve=>setTimeout(resolve,1500));
-     try{const previous=await recoverOrder(payload);if(previous){finishConfirmedOrder(previous);return}}catch(_){}
+     try{const previous=await recoverOrder(payload);if(previous){await finishConfirmedOrder(previous);return}}catch(_){}
    }
    throw Error('Ainda não foi possível confirmar a resposta. Você pode conferir novamente ou conversar com o atendente.');
  }catch(error){
@@ -113,10 +115,45 @@ async function submitPending(){
  }finally{loading=false;const button=$('acc-retry');if(button){button.disabled=false;button.textContent='Conferir e continuar'}}
 }
 
-function renderSuccess(){if(lastOrder?.status==='Cancelado'){content.innerHTML=toolbar()+'<div class="acc-message">Este pedido foi cancelado. Fale com a loja ou monte um novo carrinho.</div>';return}if(!lastOrder){view='catalog';renderCatalog();return}const o=lastOrder,a=o.endereco,address=`${a.rua}, ${a.numero}${a.complemento?' · '+a.complemento:''} — ${a.bairro}, ${a.cidade}/${a.uf}${a.cep?' · CEP '+a.cep:''}`,text=`Olá! Quero finalizar meu pedido de acessórios da Vinii Imports.\nPedido: ${o.id}\nNome: ${o.nome}\nWhatsApp: ${o.whatsapp}\n\n${o.items.map(i=>`${i.quantidade}× ${i.tipo} ${i.modelo} · ${i.nome} — ${money(i.preco*i.quantidade)}`).join('\n')}\n\nProdutos: ${money(o.subtotal)}\nFrete: ${money(o.frete)}\nTotal: ${money(o.total)}\nEntrega: ${address}${a.referencia?'\nReferência: '+a.referencia:''}\n\nGostaria de confirmar o pagamento e a entrega.`;
- content.innerHTML=`<div class="acc-message">Pedido registrado! A confirmação do pagamento será feita pela loja.</div><h3>${esc(o.nome)}, seu pedido está com a gente.</h3><p class="acc-muted" style="overflow-wrap:anywhere">Pedido ${esc(o.id)}</p><div class="acc-columns"><div>${o.items.map(i=>`<p>${i.quantidade}× ${esc(i.tipo+' '+i.modelo+' · '+i.nome)} <b>${money(i.preco*i.quantidade)}</b></p>`).join('')}<p class="acc-muted">Entrega: ${esc(address)}${a.referencia?'<br>Referência: '+esc(a.referencia):''}</p><div class="acc-total-row"><span>Produtos</span><b>${money(o.subtotal)}</b></div><div class="acc-total-row"><span>Frete</span><b>${money(o.frete)}</b></div><div class="acc-total-row total"><span>Total</span><b>${money(o.total)}</b></div></div><aside class="acc-summary"><h3 style="margin-top:0">Pagamento via Pix</h3><p class="acc-muted">Recebedor: ${esc(o.pixNome)}</p><div class="acc-key">${esc(o.pixChave)}</div><div class="acc-actions"><button class="acc-button secondary" id="acc-copy">Copiar chave Pix</button></div><a class="acc-button" href="https://wa.me/${String(o.lojaWhatsApp).replace(/\D/g,'')}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Conversar com um atendente</a><p class="acc-muted">Envie seu comprovante pelo WhatsApp ou converse com a loja para finalizar o pagamento.</p></aside></div><div class="acc-actions"><button class="acc-button secondary" data-view="catalog">Continuar comprando</button></div>`;$('acc-copy').onclick=async()=>{try{await navigator.clipboard.writeText(o.pixChave);message('Chave Pix copiada.')}catch(_){message('Selecione a chave Pix acima e copie.')}}
+function renderSuccess(){
+ if(!lastOrder){view='catalog';renderCatalog();return}
+ const o=lastOrder,a=o.endereco,address=`${a.rua}, ${a.numero}${a.complemento?' · '+a.complemento:''} — ${a.bairro}, ${a.cidade}/${a.uf}${a.cep?' · CEP '+a.cep:''}`,closed=reservationClosed(o),waiting=o.status==='Aguardando pagamento';
+ const text=closed?reservationContactText(o):`Olá! Quero finalizar meu pedido de acessórios da Vinii Imports.\nPedido: ${o.id}\nNome: ${o.nome}\nWhatsApp: ${o.whatsapp}\n\n${o.items.map(i=>`${i.quantidade}× ${i.tipo} ${i.modelo} · ${i.nome} — ${money(i.preco*i.quantidade)}`).join('\n')}\n\nProdutos: ${money(o.subtotal)}\nFrete: ${money(o.frete)}\nTotal: ${money(o.total)}\nEntrega: ${address}${a.referencia?'\nReferência: '+a.referencia:''}\n\nGostaria de confirmar o pagamento e a entrega.`;
+ content.innerHTML=`<div class="acc-message" id="acc-reservation-clock" role="status">${esc(reservationText(o))}</div><h3>${esc(o.nome)}, seu pedido continua registrado.</h3><p class="acc-muted" style="overflow-wrap:anywhere">Pedido ${esc(o.id)} · ${esc(o.status)}</p><div class="acc-columns"><div>${o.items.map(i=>`<p>${i.quantidade}× ${esc(i.tipo+' '+i.modelo+' · '+i.nome)} <b>${money(i.preco*i.quantidade)}</b></p>`).join('')}<p class="acc-muted">Entrega: ${esc(address)}${a.referencia?'<br>Referência: '+esc(a.referencia):''}</p><div class="acc-total-row"><span>Produtos</span><b>${money(o.subtotal)}</b></div><div class="acc-total-row"><span>Frete</span><b>${money(o.frete)}</b></div><div class="acc-total-row total"><span>Total do pedido</span><b>${money(o.total)}</b></div></div><aside class="acc-summary" id="acc-payment-box"><h3 style="margin-top:0" id="acc-payment-heading">${closed?'Converse com a loja':waiting?'Pagamento via Pix':'Pagamento confirmado'}</h3><div data-reservation-payment ${closed||!waiting?'hidden':''}><p class="acc-muted">Recebedor: ${esc(o.pixNome)}</p><div class="acc-key">${esc(o.pixChave)}</div><div class="acc-actions"><button class="acc-button secondary" id="acc-copy">Copiar chave Pix</button></div></div><a class="acc-button" id="acc-order-contact" href="https://wa.me/${String(o.lojaWhatsApp).replace(/\D/g,'')}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Conversar com um atendente</a><p class="acc-muted" id="acc-payment-help"></p><button class="acc-button secondary" type="button" id="acc-refresh-order">Atualizar situação do pedido</button></aside></div><div class="acc-actions"><button class="acc-button secondary" data-view="catalog">Continuar comprando</button></div>`;
+ $('acc-copy').onclick=async()=>{if(reservationClosed(lastOrder)||lastOrder.status!=='Aguardando pagamento'){refreshReservationDisplay();return}try{await navigator.clipboard.writeText(o.pixChave);message('Chave Pix copiada.')}catch(_){message('Selecione a chave Pix acima e copie.')}};
+ $('acc-refresh-order').onclick=async()=>{await refreshLastOrder();refreshReservationDisplay()};refreshReservationDisplay();
 }
+
 async function open(){const cached=readCatalogCache();if(cached){data=cached;render()}else content.innerHTML='<p class="acc-muted">Carregando acessórios…</p>';try{await load();if(cached)refreshCatalogView();else render()}catch(e){if(cached){message('Não foi possível atualizar agora. Mostrando a última lista salva.');return}content.innerHTML='<div class="acc-empty">'+esc(e.message)+'</div><div class="acc-actions"><button class="acc-button" id="acc-load-retry">Tentar novamente</button></div>';$('acc-load-retry').onclick=open}}
+let orderLookup=session.get('vinii_acc_order_lookup'),orderRefreshBusy=false;
+function reservationTimeLeft(order){if(!order?.reservaAte)return null;return Math.max(0,Number(order.reservaAte)-(Date.now()+Number(order.clockOffset||0)))}
+function reservationClosed(order){return order?.status==='Reserva expirada'||order?.status==='Cancelado'||(order?.status==='Aguardando pagamento'&&reservationTimeLeft(order)===0)}
+function reservationText(order){
+ if(order.status==='Reserva expirada')return 'Reserva encerrada. Seu pedido continua com a loja: se já pagou, envie o comprovante ao atendente para confirmar.';
+ if(order.status==='Cancelado')return 'Pedido cancelado. Fale com a loja para continuar.';
+ if(order.status!=='Aguardando pagamento')return 'Pagamento confirmado pela loja. Seu pedido está '+String(order.status).toLowerCase()+'.';
+ const left=reservationTimeLeft(order);if(left===null)return 'Aguardando a confirmação do pagamento pela loja.';
+ if(left<=0)return 'O prazo da reserva terminou. Se já pagou, fale com a loja para confirmar; o pedido continua registrado.';
+ const minutes=Math.floor(left/60000),seconds=Math.floor(left%60000/1000);return 'Seus itens estão reservados por mais '+String(minutes).padStart(2,'0')+':'+String(seconds).padStart(2,'0')+'. A loja precisa confirmar o Pix para concluir a venda.';
+}
+function reservationContactText(order){
+ return 'Olá! Preciso confirmar meu pedido '+order.id+' de acessórios.\nNome: '+order.nome+'\nSe já enviei o Pix, gostaria que conferissem o comprovante e o estoque para concluir a compra.';
+}
+function refreshReservationDisplay(){
+ if(view!=='success'||!lastOrder||!$('acc-reservation-clock'))return;
+ $('acc-reservation-clock').textContent=reservationText(lastOrder);
+ const block=$('acc-payment-box'),help=$('acc-payment-help'),closed=reservationClosed(lastOrder),waiting=lastOrder.status==='Aguardando pagamento';
+ if(block){block.querySelectorAll('[data-reservation-payment]').forEach(e=>e.hidden=closed||!waiting);const heading=$('acc-payment-heading');if(heading)heading.textContent=closed?'Converse com a loja':waiting?'Pagamento via Pix':'Pagamento confirmado';}
+ if(help)help.textContent=closed?'A chave Pix foi ocultada porque a reserva terminou. Se já pagou, seu pedido ainda pode ser confirmado pelo atendente, mediante estoque.':waiting?'Envie o comprovante pelo WhatsApp. O pagamento será confirmado pela loja.':'A loja confirmou seu pagamento. Você pode acompanhar a entrega pelo atendimento.';
+}
+async function refreshLastOrder(){
+ if(orderRefreshBusy||!orderLookup||!lastOrder||view!=='success')return;orderRefreshBusy=true;
+ try{const result=await recoverOrderByProof(orderLookup);if(result?.order&&lastOrder.id===result.order.id){const oldStatus=lastOrder.status;lastOrder={...result.order,clockOffset:Number(result.order.servidorAgora||Date.now())-Date.now()};session.set('vinii_acc_last_order',lastOrder);if(view==='success'){if(oldStatus!==lastOrder.status){render();}else refreshReservationDisplay();}}}catch(_){}finally{orderRefreshBusy=false}
+}
+setInterval(()=>{if(typeof document.hidden!=='undefined'&&document.hidden)return;refreshReservationDisplay()},1000);
+setInterval(()=>{if(typeof document.hidden!=='undefined'&&document.hidden)return;if(view==='success'&&['Aguardando pagamento','Reserva expirada'].includes(lastOrder?.status))refreshLastOrder();else if(!pending&&!loading&&['catalog','cart'].includes(view))load().then(refreshCatalogView).catch(()=>{})},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&view==='success')refreshLastOrder()});
+
 $('acc-photo-close').onclick=()=>$('acc-photo').close();open();
 })();
 </script>
