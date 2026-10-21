@@ -22,7 +22,7 @@ function saveCart(){storage.set('vinii_acc_cart_v1',cart)}
 function message(t){$('acc-live').textContent=t||''}
 async function request(action,body){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),body&&action==='createAccessoryOrder'?18000:45000);try{const r=await fetch(body?API_URL:API_URL+'?action='+action+'&_='+Date.now(),body?{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...body,action}),signal:controller.signal}:{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('Conexão indisponível. Tente novamente.');const d=await r.json();if(d.error){const e=Error(d.error==='unknown action'?'A loja de acessórios está sendo preparada. Volte em breve.':d.error);e.definitive=true;throw e}return d}finally{clearTimeout(timer)}}
 function productModels(i){return Array.isArray(i.modelos)?i.modelos:String(i.modelo||'').split(/[/;,|\n]+/).map(s=>s.trim()).filter(Boolean)}
-const CATALOG_CACHE_KEY='vinii_acc_catalog_v2_compat',CATALOG_CACHE_TTL=24*60*60*1000;
+const CATALOG_CACHE_KEY='vinii_acc_catalog_v3_groups',CATALOG_CACHE_TTL=24*60*60*1000;
 let catalogPromise=null;
 function readCatalogCache(){const c=storage.get(CATALOG_CACHE_KEY),age=Date.now()-Number(c?.savedAt);if(!c||c.version!==1||!Number.isFinite(age)||age<0||age>CATALOG_CACHE_TTL||!Array.isArray(c.data?.items)||!Array.isArray(c.data?.shipping))return null;return {ok:true,items:c.data.items,shipping:c.data.shipping,payment:c.data.payment||{}}}
 function writeCatalogCache(d){storage.set(CATALOG_CACHE_KEY,{version:1,savedAt:Date.now(),data:{items:d.items,shipping:d.shipping,payment:{whatsapp:d.payment?.whatsapp||WHATSAPP_NUMBER}}})}
