@@ -746,6 +746,23 @@ header .logo-wrap img{
 }
 </style>
 
+<style id="vinii-service-cards-2026">
+.vinii-catalog-cta{display:inline-flex;align-items:center;justify-content:center;gap:12px;margin:20px 0 24px;padding:13px 21px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:750;background:linear-gradient(135deg,#f3d56b,#c49522);color:#090909;box-shadow:0 9px 24px rgba(212,175,55,.18)}
+.vinii-service-heading{color:#f7f4ec;font-weight:750;font-size:19px;margin-bottom:15px}.vinii-service-heading small{display:block;color:#aaa39a;font-size:12px;font-weight:450;margin-top:4px}
+.vinii-service-links{display:grid;grid-template-columns:1fr;gap:12px;max-width:560px}
+.vinii-service-card{display:flex;align-items:center;gap:14px;width:100%;min-height:82px;box-sizing:border-box;padding:15px 17px;border:1px solid rgba(212,175,55,.43);border-radius:17px;background:linear-gradient(120deg,#242126,#171719);color:#fff;text-decoration:none!important;box-shadow:0 5px 18px rgba(0,0,0,.22);transition:transform .2s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease;cursor:pointer}
+.vinii-service-card:hover,.vinii-service-card:focus-visible{transform:translateY(-2px);border-color:#e1b96f;background:linear-gradient(120deg,#30291f,#1c1a1b);box-shadow:0 8px 26px rgba(212,175,55,.14);outline:none}
+.vinii-service-card:active{transform:scale(.985)}
+.vinii-service-icon{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:13px;background:#403323;color:#e1b96f;font-size:26px;font-weight:650}
+.vinii-service-copy{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0}.vinii-service-copy strong{font-size:16px;line-height:1.2;color:#fff}.vinii-service-copy small{font-size:12px;line-height:1.35;color:#bdb6ad}.vinii-service-arrow{color:#e1b96f;font-size:24px;flex:none}
+@media(max-width:600px){.vinii-service-links{max-width:100%}.vinii-service-card{min-height:78px;padding:13px}.vinii-service-icon{width:44px;height:44px}.vinii-service-copy strong{font-size:15px}}
+@media(prefers-reduced-motion:reduce){.vinii-service-card{transition:none}}
+</style>
+<style id="vinii-quick-checkout-style">
+#vinii-checkout-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.76);display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(5px)}
+#vinii-checkout-overlay.open{display:flex}#vinii-checkout-overlay #panel-2{display:block!important;width:min(100%,390px);max-height:min(90dvh,650px);overflow:auto;background:#141414;border:1px solid rgba(212,175,55,.48);border-radius:20px;padding:23px 20px;box-shadow:0 20px 80px #000c;position:relative}
+#vinii-checkout-overlay .section-title{font-size:21px}#vinii-checkout-overlay .section-sub{font-size:13px;margin-bottom:15px}#vinii-checkout-overlay .summary-card{padding:0;border:0;background:transparent}#vinii-checkout-overlay .nav-row{display:flex;gap:10px;margin-top:17px}#vinii-checkout-overlay .nav-row button{flex:1}#vinii-checkout-overlay input{min-height:46px}body.vinii-checkout-open{overflow:hidden}
+</style>
 </head>
 <body>
 <div class="glow"></div>
@@ -765,11 +782,13 @@ header .logo-wrap img{
     <div class="hero-kicker">Vinii Imports • iPhones Importados</div>
     <h2>Qualidade que <span>você merece.</span></h2>
     <p>iPhones selecionados, com fotos reais, informações completas e atendimento direto pelo WhatsApp. Escolha seu aparelho e monte seu pedido.</p>
-    <div class="hero-actions">
-      <a class="hero-main" href="#catalogo-vinii">Ver catálogo</a>
-      <a class="hero-alt" href="upgrade/" id="heroUpgradeBtn">Fazer Upgrade</a>
-    </div>
-    <a class="hero-partner" href="https://investidores.viniimports.com.br/">Seja parceiro da Vinii Imports ↗</a>
+    <a class="hero-main vinii-catalog-cta" href="#catalogo-vinii">Ver catálogo de iPhones <span aria-hidden="true">↓</span></a>
+    <div class="vinii-service-heading">Explore nossos serviços <small>Toque em uma opção para acessar</small></div>
+    <nav class="vinii-service-links" aria-label="Serviços Vinii Imports">
+      <a class="vinii-service-card" href="/acessorios/"><span class="vinii-service-icon" aria-hidden="true">▣</span><span class="vinii-service-copy"><strong>Comprar acessórios</strong><small>Capinhas, películas e muito mais</small></span><span class="vinii-service-arrow" aria-hidden="true">↗</span></a>
+      <a class="vinii-service-card" href="upgrade/" id="heroUpgradeBtn"><span class="vinii-service-icon" aria-hidden="true">↻</span><span class="vinii-service-copy"><strong>Trocar meu iPhone</strong><small>Use seu iPhone atual na troca</small></span><span class="vinii-service-arrow" aria-hidden="true">↗</span></a>
+      <a class="vinii-service-card" href="https://investidores.viniimports.com.br/"><span class="vinii-service-icon" aria-hidden="true">↗</span><span class="vinii-service-copy"><strong>Seja nosso parceiro</strong><small>Conheça nossa área de investimentos</small></span><span class="vinii-service-arrow" aria-hidden="true">↗</span></a>
+    </nav>
   </div>
 </section>
 <main>
@@ -1408,6 +1427,29 @@ loadProducts();
 const productSearch=document.getElementById('product-search');
 if(productSearch) productSearch.addEventListener('input',()=>{const q=productSearch.value.trim().toLowerCase();document.querySelectorAll('#product-grid .product-card').forEach(card=>{const p=PRODUCTS.find(x=>String(x.id)===String(card.dataset.id));const hay=p?[p.modelo,p.cor,p.condicao,p.saudeBateria].filter(Boolean).join(' ').toLowerCase():card.textContent.toLowerCase();card.style.display=hay.includes(q)?'':'none';});});
 </script>
+<script id="vinii-quick-checkout-script">
+(function(){
+const KEY='vinii_checkout_contact_v1', DAYS=30*86400000;
+const panel=document.getElementById('panel-2');if(!panel)return;
+const overlay=document.createElement('div');overlay.id='vinii-checkout-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Seus dados para a compra');
+panel.parentNode.insertBefore(overlay,panel);overlay.appendChild(panel);
+const name=document.getElementById('purchase-name'),phone=document.getElementById('purchase-whatsapp');
+function restore(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return;if(Date.now()-v.time>DAYS){localStorage.removeItem(KEY);return;}name.value=v.name||'';phone.value=v.phone||'';}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({name:name.value.trim(),phone:phone.value.trim(),time:Date.now()}));}catch(e){}}
+[name,phone].forEach(x=>x.addEventListener('input',save));restore();
+function close(){overlay.classList.remove('open');document.body.classList.remove('vinii-checkout-open');}
+function open(){restore();overlay.classList.add('open');document.body.classList.add('vinii-checkout-open');setTimeout(()=>{(name.value?phone:name).focus({preventScroll:true});},60);}
+// Mantém o fluxo original de compra; substitui apenas a apresentação do passo 2.
+const originalGo=window.goToStep;
+if(typeof originalGo==='function'){
+window.goToStep=function(n){if(n===2){open();return;}close();originalGo(n);if(n===3){document.getElementById('panel-3')?.scrollIntoView({block:'start',behavior:'instant'});}};
+}
+overlay.addEventListener('click',e=>{if(e.target===overlay){close();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close();});
+const back=document.getElementById('back-to-1');if(back)back.addEventListener('click',close);
+const next=document.getElementById('to-step-3');if(next)next.addEventListener('click',()=>{if(name.value.trim().length>=2 && /\d{10,11}/.test(phone.value.replace(/\D/g,''))){save();close();}});
+})();
+</script>
 
 <script>
 // Upgrade em uma página própria, na mesma aba.
@@ -1684,7 +1726,7 @@ body > header .home-float:hover{background:rgba(201,162,39,.09)!important;border
 </style>
 <!-- Acessórios em página própria -->
 <script>
-(()=>{const holder=document.querySelector('.hero-actions');if(holder){const link=document.createElement('a');link.className='hero-alt';link.href='/acessorios/';link.textContent='Acessórios';holder.append(link)}if(location.hash==='#acessorios')location.replace('/acessorios/');})();
+(()=>{if(location.hash==='#acessorios')location.replace('/acessorios/');})();
 </script>
 </body>
 </html>
