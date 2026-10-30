@@ -1162,6 +1162,13 @@ function goToStep(n){
     if(s === n) pill.classList.add('active'); else if(s < n) pill.classList.add('done');
   });
   if(n === 3) renderSummary();
+  // Ao avançar, mostra sempre o título do passo, não a posição anterior da página.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const panel = document.getElementById('panel-' + n);
+    if (!panel) return;
+    const top = Math.max(0, window.scrollY + panel.getBoundingClientRect().top - 120);
+    window.scrollTo({top, behavior:'instant'});
+  }));
 }
 
 function renderSummary(){
@@ -1442,10 +1449,10 @@ function open(){restore();overlay.classList.add('open');document.body.classList.
 // Mantém o fluxo original de compra; substitui apenas a apresentação do passo 2.
 const originalGo=window.goToStep;
 if(typeof originalGo==='function'){
-window.goToStep=function(n){if(n===2){open();return;}close();originalGo(n);if(n===3){document.getElementById('panel-3')?.scrollIntoView({block:'start',behavior:'instant'});}};
+window.goToStep=function(n){if(n===2){originalGo(1);open();return;}close();originalGo(n);};
 }
-overlay.addEventListener('click',e=>{if(e.target===overlay){close();}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close();});
+overlay.addEventListener('click',e=>{if(e.target===overlay){close();originalGo(1);}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open')){close();originalGo(1);}});
 const back=document.getElementById('back-to-1');if(back)back.addEventListener('click',close);
 const next=document.getElementById('to-step-3');if(next)next.addEventListener('click',()=>{if(name.value.trim().length>=2 && /\d{10,11}/.test(phone.value.replace(/\D/g,''))){save();close();}});
 })();
