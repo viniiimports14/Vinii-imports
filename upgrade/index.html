@@ -35,7 +35,15 @@ main{max-width:1120px;margin:0 auto;padding:25px 24px 80px}
 .grid>*,.option,.product{border-radius:12px}
 @media(max-width:700px){header{padding:24px 18px 19px;gap:14px;align-items:flex-start}header h1{font-size:31px}.back{padding:9px 11px;font-size:11px}main{padding:18px 14px 60px}.steps{flex-wrap:nowrap;overflow:auto;width:100%;scrollbar-width:thin}.step{flex:0 0 auto;padding:9px 11px}.card{padding:23px 18px}.formgrid{grid-template-columns:1fr}}
 
-</style></head><body><div class="glow"></div>
+</style>
+<style>
+#viniiReuseOverlay{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
+.vinii-reuse-card{width:min(100%,370px);background:#181a1e;border:1px solid rgba(201,162,39,.45);border-radius:16px;padding:24px;text-align:center;box-shadow:0 20px 80px #0009;color:#f2f1ed}
+.vinii-reuse-icon{font-size:28px;color:#e6c766}.vinii-reuse-card h2{font:700 21px 'Space Grotesk',sans-serif;margin:10px 0}
+.vinii-reuse-card p{color:#c0c0c4;font-size:13px;line-height:1.6}.vinii-reuse-card strong{color:#f1d478}
+.vinii-reuse-card .btn{width:100%;margin-top:10px;cursor:pointer}
+</style>
+</head><body><div class="glow"></div>
 <header><div><div class="eyebrow">Vinii Imports · Upgrade</div><h1>Troque seu iPhone por outro.</h1><p>Use seu iPhone atual como parte do pagamento e descubra quanto falta para levar o aparelho que você quer.</p></div><a class="back" href="../">Voltar para a loja</a></header>
 <main><div class="steps" id="steps"></div>
 <section class="card active" id="s0"><div class="title">Antes de começar</div><div class="sub">Informe seu nome e WhatsApp. Usaremos esses dados somente para identificar sua simulação e poder entrar em contato com você.</div><div class="formgrid" style="margin-top:18px"><div class="field"><label>Seu nome</label><input id="leadName" type="text" autocomplete="name" placeholder="Digite seu nome"></div><div class="field"><label>Seu WhatsApp</label><input id="leadWhatsApp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(22) 99999-9999"></div></div><div class="notice"><b>Importante:</b> aceitamos somente iPhone XR ou superior. Não aceitamos Android.</div><div class="actions"><button class="btn primary" id="startUpgradeBtn" onclick="startUpgrade()">Continuar</button></div></section>
@@ -186,4 +194,99 @@ for(const q of qs){if(!document.getElementById(q[0]).value){alert('Preencha todo
 async function reject(msg){const whatsText=getUpgradeWhatsText(`APARELHO NÃO ELEGÍVEL — ${msg}`);await saveUpgradeLead(`APARELHO NÃO ELEGÍVEL — ${msg}`,'Rejeitado',null);document.getElementById('result').innerHTML=`<div class="reject"><h2>Este aparelho não é elegível</h2><p>${msg}</p><p class="fine">Se quiser, fale conosco pelo WhatsApp para verificar outras opções.</p><a class="whats" target="_blank" href="https://wa.me/${WA}?text=${encodeURIComponent(whatsText)}">Falar no WhatsApp</a></div><div class="actions"><button class="btn" onclick="go(3)">Voltar</button></div>`;go(4)}
 async function renderResult(d){let text,cls='';if(d.difference>0)text=`Você precisa completar ${money(d.difference)}`;else if(d.difference<0){text=`Você pode receber ${money(Math.abs(d.difference))} de diferença`;cls='credit'}else text='Possível troca sem diferença';await saveUpgradeLead(text,'Calculado',d.difference);const whatsText=getUpgradeWhatsText(text);document.getElementById('result').innerHTML=`<div class="result"><div class="title">Seu Upgrade</div><div class="sub">Estimativa sujeita à conferência física do aparelho.</div><div class="summary"><div class="sum"><span>Você quer</span><b>${d.wanted.modelo} · ${d.wanted.condicao||''}</b></div><div class="sum"><span>Você tem</span><b>${have} · ${document.getElementById('storage').value}</b></div></div><div class="amount ${cls}">${text}</div><div class="notice">O valor informado é apenas a diferença da troca.</div><a class="whats" target="_blank" href="https://wa.me/${WA}?text=${encodeURIComponent(whatsText)}">Continuar pelo WhatsApp</a><div class="actions"><button class="btn" onclick="go(3)">Alterar respostas</button></div></div>`;go(4)}
 document.getElementById('storage').onchange=updateNext2;renderModels();renderQuestions();renderSteps(0);loadProducts();
+
+/* Memória temporária da avaliação — somente neste navegador. */
+const VINII_DRAFT_KEY='vinii_upgrade_draft_v1';
+const VINII_DRAFT_TTL=30*24*60*60*1000;
+let viniiRestoring=false;
+function viniiReadDraft(){
+ try{const d=JSON.parse(localStorage.getItem(VINII_DRAFT_KEY)||'null');
+ if(!d||!d.savedAt||Date.now()-d.savedAt>VINII_DRAFT_TTL){localStorage.removeItem(VINII_DRAFT_KEY);return null}
+ return d;}catch(e){return null}
+}
+function viniiSaveDraft(){
+ if(viniiRestoring)return;
+ try{
+ const answers={};qs.forEach(q=>answers[q[0]]=document.getElementById(q[0])?.value||'');
+ const old=viniiReadDraft();
+ const d={savedAt:Date.now(),name:document.getElementById('leadName').value.trim(),
+ phone:document.getElementById('leadWhatsApp').value.trim(),have,storage:document.getElementById('storage').value,
+ answers,wantedId:wanted?.id||null,customWanted:customWanted||null};
+ // Não apague o aparelho anterior quando o cliente apenas reabre a página.
+ if(!d.have&&!d.storage&&!Object.values(answers).some(Boolean)&&old?.have){
+ d.have=old.have;d.storage=old.storage;d.answers=old.answers;d.wantedId=old.wantedId;d.customWanted=old.customWanted;
+ }
+ localStorage.setItem(VINII_DRAFT_KEY,JSON.stringify(d));
+ }catch(e){}
+}
+function viniiRestoreDraft(d){
+ viniiRestoring=true;
+ try{
+ have=d.have||'';
+ document.querySelectorAll('#models .choice').forEach(b=>b.classList.toggle('selected',b.dataset.model===have));
+ document.getElementById('storage').value=d.storage||'';
+ qs.forEach(q=>{const el=document.getElementById(q[0]);if(el&&q[2].includes(d.answers?.[q[0]]))el.value=d.answers[q[0]]});
+ customWanted=d.customWanted||null;
+ if(customWanted){
+ document.getElementById('customModel').value=customWanted.model||'';
+ document.getElementById('customStorage').value=customWanted.storage||'';
+ document.getElementById('customColor').value=customWanted.color||'';
+ wanted=null;
+ }else if(d.wantedId){
+ wanted=products.find(p=>String(p.id)===String(d.wantedId))||null;
+ }
+ updateNext2();
+ }finally{viniiRestoring=false}
+}
+function viniiOfferReuse(){
+ const d=viniiReadDraft();
+ if(!d?.have)return;
+ const overlay=document.createElement('div');
+ overlay.id='viniiReuseOverlay';
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+ overlay.setAttribute('aria-label','Reutilizar avaliação anterior');
+ overlay.innerHTML=`<div class="vinii-reuse-card"><div class="vinii-reuse-icon">↻</div>
+ <h2>É o mesmo iPhone de antes?</h2>
+ <p>Você já avaliou um <strong>${d.have.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong>${d.storage?' · '+d.storage.replace(/</g,'&lt;'):''}.</p>
+ <p>Deseja aproveitar as respostas anteriores?</p>
+ <button type="button" class="btn primary" id="viniiReuseYes">Sim, usar minha avaliação</button>
+ <button type="button" class="btn" id="viniiReuseNo">Não, avaliar outro iPhone</button></div>`;
+ document.body.appendChild(overlay);
+ document.getElementById('viniiReuseYes').onclick=()=>{
+ viniiRestoreDraft(d);overlay.remove();
+ // O cliente escolhe o iPhone desejado novamente, evitando reutilizar produto esgotado.
+ go(1);
+ };
+ document.getElementById('viniiReuseNo').onclick=()=>{
+ viniiRestoring=true;
+ have='';wanted=null;customWanted=null;
+ document.getElementById('storage').value='';
+ qs.forEach(q=>document.getElementById(q[0]).value='');
+ document.querySelectorAll('#models .choice').forEach(b=>b.classList.remove('selected'));
+ updateNext2();viniiRestoring=false;
+ overlay.remove();viniiSaveDraft();go(1);
+ };
+}
+const viniiOriginalStartUpgrade=startUpgrade;
+startUpgrade=function(){
+ const name=document.getElementById('leadName').value.trim();
+ const phone=normalizeWhatsApp(document.getElementById('leadWhatsApp').value);
+ if(name.length<2||!/^55\d{10,11}$/.test(phone)){viniiOriginalStartUpgrade();return}
+ leadName=name;leadWhatsApp=phone;
+ const old=viniiReadDraft();
+ if(old?.have){viniiOfferReuse();return}
+ viniiSaveDraft();go(1);
+};
+document.addEventListener('DOMContentLoaded',()=>{
+ const d=viniiReadDraft();
+ if(d){
+ document.getElementById('leadName').value=d.name||'';
+ document.getElementById('leadWhatsApp').value=d.phone||'';
+ }
+ document.addEventListener('input',e=>{if(e.target.matches('#leadName,#leadWhatsApp,#customModel,#customColor'))viniiSaveDraft()});
+ document.addEventListener('change',e=>{if(e.target.matches('select'))viniiSaveDraft()});
+ document.addEventListener('click',e=>{if(e.target.closest('#models .choice,#wanted .choice,#customContinueBtn'))setTimeout(viniiSaveDraft,0)});
+ window.addEventListener('pagehide',viniiSaveDraft);
+});
+
 </script></body></html>
