@@ -15,7 +15,7 @@ function modelKey(i){
 }
 function compareModels(a,b){
  const x=modelKey(a),y=modelKey(b);
- if(x&&y)return y[0]-x[0]||y[1]-x[1]||x[2]-y[2]||modelCollator.compare(String(a.nome||''),String(b.nome||''));
+ if(x&&y)return x[0]-y[0]||x[1]-y[1]||x[2]-y[2]||modelCollator.compare(String(a.nome||''),String(b.nome||''));
  if(x||y)return x?-1:1;
  return modelCollator.compare(String(a.categoria||''),String(b.categoria||''))||modelCollator.compare(String(a.nome||''),String(b.nome||''));
 }
